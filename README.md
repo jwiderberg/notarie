@@ -1,8 +1,8 @@
-# Minnas
+# Notarie
 
-Minnas is a Mac menubar app that records your meetings, transcribes them on
+Notarie is a Mac menubar app that records your meetings, transcribes them on
 the Mac itself, and drops the result as a Markdown file into a folder you
-pick. "Minnas" is Swedish for "to remember".
+pick. "Notarie" is Swedish for the person who keeps the minutes.
 
 ## Getting started
 
@@ -13,20 +13,27 @@ Apple M-something, and "macOS" should show 15 or higher. You also need about
 
 To install it:
 
-1. Open the [latest release](https://github.com/jwiderberg/minnas/releases/latest)
-   and download the file named `Minnas-<version>.zip`.
-2. Double-click the downloaded file to unzip it, then drag Minnas into your
+1. Open the [latest release](https://github.com/jwiderberg/notarie/releases/latest)
+   and download the file named `Notarie-<version>.zip`.
+2. Double-click the downloaded file to unzip it, then drag Notarie into your
    Applications folder.
-3. Open Minnas from Applications. It doesn't appear in the Dock; look for a
+3. Open Notarie from Applications. It doesn't appear in the Dock; look for a
    small microphone icon in the menu bar at the top right of the screen.
 
 The first time it opens, a setup window walks you through four steps. It asks
 where to keep your transcripts (the suggested folder in Documents is fine),
 asks for access to the microphone, and sends you to System Settings to allow
-recording the audio from the call. In System Settings, find Minnas under
+recording the audio from the call. In System Settings, find Notarie under
 Privacy & Security › Screen & System Audio Recording and switch it on. If
-macOS asks to quit and reopen Minnas, let it. The last step offers two
+macOS asks to quit and reopen Notarie, let it. The last step offers two
 extras, cloud transcription and a calendar reminder; you can skip both.
+
+Notarie used to be called Minnas. If you used Minnas, quit it before you open
+Notarie for the first time. Notarie then moves your recordings and settings
+over, and copies your OpenAI key if you saved one (macOS may ask once whether
+Notarie can read it). macOS doesn't carry the microphone and audio permissions
+over to a new name, so setup asks for them again. When it's done, drag
+Minnas from Applications to the Trash.
 
 To record a meeting:
 
@@ -44,7 +51,7 @@ stop. While recording, a plain click on the red dot hides the timer and the
 level bars, for when you share your screen; click it again to bring them
 back.
 
-Minnas then turns the recording into text on your Mac. That takes a few
+Notarie then turns the recording into text on your Mac. That takes a few
 minutes for an hour-long meeting; the very first time it takes longer,
 because it downloads the speech models first. The transcript shows up as a
 file in the folder you chose, and you can also open it from the icon's
@@ -108,7 +115,7 @@ Apple silicon, which runs Whisper on its own Neural Engine. And your
 iPhone has excellent microphones, ample storage with iCloud sync, and the
 Voice Memos app.
 
-Minnas came about as a solution to cut through the platform lock-in
+Notarie came about as a solution to cut through the platform lock-in
 nonsense, reuse your phone as the hardware for physical meetings, and keep
 all your transcriptions, regardless of platform, local and in an open format
 (Markdown) you can import into a note organiser like Obsidian, an LLM
@@ -118,7 +125,7 @@ when organising and gives LLMs useful context.
 
 ## How it works
 
-- Minnas captures the audio your Mac plays and the audio your microphone
+- Notarie captures the audio your Mac plays and the audio your microphone
   hears, so Zoom, Teams, Meet, FaceTime and a browser tab all look the same
   to it.
 - Transcription runs on the Apple Neural Engine with
@@ -172,10 +179,10 @@ when organising and gives LLMs useful context.
 
 ### Download
 
-The [latest release](https://github.com/jwiderberg/minnas/releases/latest)
-carries a `Minnas-<version>.zip` that GitHub Actions built from the tagged commit,
+The [latest release](https://github.com/jwiderberg/notarie/releases/latest)
+carries a `Notarie-<version>.zip` that GitHub Actions built from the tagged commit,
 signed with a Developer ID certificate and notarized by Apple, so it opens
-without a Gatekeeper warning. Unzip it, move Minnas.app to /Applications,
+without a Gatekeeper warning. Unzip it, move Notarie.app to /Applications,
 open it. [Verify a download](#verify-a-download) explains how to check what
 you got. Only the latest release is kept. To build an older version from
 source, run `git checkout v<version>` before the install script (see below).
@@ -185,8 +192,8 @@ source, run `git checkout v<version>` before the install script (see below).
 To build from source:
 
 ```sh
-git clone https://github.com/jwiderberg/minnas.git
-cd minnas
+git clone https://github.com/jwiderberg/notarie.git
+cd notarie
 bash scripts/install.sh
 ```
 
@@ -203,7 +210,7 @@ What the script does, in order:
    through SwiftPM.
 4. Offers to create a local code-signing identity (see below), asking
    `Create the local signing identity? [y/N]`.
-5. Runs `scripts/make-app.sh` to assemble and sign `Minnas.app`.
+5. Runs `scripts/make-app.sh` to assemble and sign `Notarie.app`.
 6. Copies it to `/Applications` (or `~/Applications` if that isn't writable,
    or wherever you said with `--dest`). It asks before replacing an existing
    copy.
@@ -216,7 +223,7 @@ It never uses `sudo` and makes no network requests of its own.
 About the signing identity: macOS remembers your microphone and recording
 permissions by the app's code signature. A build without a stable signature
 gets a new one each time, so macOS asks you again after every rebuild, which
-gets old fast. The identity ("Minnas Dev") is a single self-signed
+gets old fast. The identity ("Notarie Dev") is a single self-signed
 certificate and key in your login keychain. Nobody else trusts it and it
 only signs builds made on this Mac. Say no, or pass `--no-identity`, if
 you'd rather not have it, and expect to re-grant permissions after each
@@ -232,14 +239,14 @@ Each check proves one thing. Only the attestation check needs the
 [GitHub CLI](https://cli.github.com); the others are built into macOS.
 
 ```sh
-shasum -a 256 -c Minnas-<version>.zip.sha256         # the file is intact
-gh attestation verify Minnas-<version>.zip --repo jwiderberg/minnas \
+shasum -a 256 -c Notarie-<version>.zip.sha256         # the file is intact
+gh attestation verify Notarie-<version>.zip --repo jwiderberg/notarie \
      --source-ref refs/tags/v<version> \
-     --signer-workflow jwiderberg/minnas/.github/workflows/release.yml
+     --signer-workflow jwiderberg/notarie/.github/workflows/release.yml
      # this exact file was produced by this repository's release workflow
      # from the tagged commit (a Sigstore-signed statement from GitHub)
-spctl --assess --type execute -vv Minnas.app          # "accepted source=Notarized Developer ID"
-codesign -dvv Minnas.app 2>&1 | grep TeamIdentifier   # the Team ID shown in the release notes
+spctl --assess --type execute -vv Notarie.app          # "accepted source=Notarized Developer ID"
+codesign -dvv Notarie.app 2>&1 | grep TeamIdentifier   # the Team ID shown in the release notes
 ```
 
 `--source-ref` and `--signer-workflow` rule out a file built from a branch or
@@ -263,14 +270,14 @@ bash scripts/uninstall.sh
 It asks before each step, and the default is no: removing the app, deleting
 the working data in Application Support (your recorded audio), deleting the
 keychain item, deleting the signing identity, and resetting the permission
-grants. It stops if Minnas is running, so quit it first. It never touches your
+grants. It stops if Notarie is running, so quit it first. It never touches your
 transcripts folder.
 
 ## First run and permissions
 
-Minnas lives in the menu bar and has no Dock icon. On first launch a setup
+Notarie lives in the menu bar and has no Dock icon. On first launch a setup
 window asks where transcripts should go (it suggests
-`~/Documents/Minnas Transcripts`), walks through the microphone and
+`~/Documents/Notarie Transcripts`), walks through the microphone and
 system-audio permissions, and offers the optional extras (an OpenAI key, the
 calendar). The table below is every permission it can ask for.
 
@@ -312,14 +319,14 @@ It needs Screen Recording.
   under Settings › General (`markdownFullMeetingDetails`). Then a recording
   tagged with a calendar event also gets its attendees and location in the
   frontmatter, and the invite's notes as an "Invite notes" section above the
-  conversation. It applies to transcripts written after you turn it on. Minnas adds and
+  conversation. It applies to transcripts written after you turn it on. Notarie adds and
   updates files there and never deletes anything in that folder; `scripts/uninstall.sh` leaves
   it alone too. Until you've chosen a folder, transcripts stay in
   the working data below; once you choose one, every existing transcript is
   written out within five minutes.
 - Working data. Audio, the per-recording metadata (`meta.json`) and a local
   copy of each transcript live in
-  `~/Library/Application Support/minnas/outbox/`, one folder per recording.
+  `~/Library/Application Support/notarie/outbox/`, one folder per recording.
 - Retention. Recorded audio is deleted at the next launch after it is 30 days
   old by default (`recordingsKeepDays`; `0` keeps it forever), counted from
   when the recording arrived. Until then you can re-transcribe it with
@@ -341,11 +348,11 @@ reachable from the shell through the binary inside the app bundle, which
 reads the app's own settings and keychain:
 
 ```sh
-MINNAS=/Applications/Minnas.app/Contents/MacOS/minnas
-$MINNAS --settings                          # all settings, with value and source
-$MINNAS --settings set recordingsKeepDays 90
-$MINNAS --settings set openAIKey -          # "-" reads the value from stdin
-$MINNAS --settings unset recordingsKeepDays
+NOTARIE=/Applications/Notarie.app/Contents/MacOS/notarie
+$NOTARIE --settings                          # all settings, with value and source
+$NOTARIE --settings set recordingsKeepDays 90
+$NOTARIE --settings set openAIKey -          # "-" reads the value from stdin
+$NOTARIE --settings unset recordingsKeepDays
 ```
 
 An environment variable wins over a stored setting, which wins over a `.env`
@@ -400,7 +407,7 @@ See [SECURITY.md](SECURITY.md) for the threat model.
   with silence so they stay in sync. If a track stays dead, the menu shows a
   cross next to it and an alert appears. If it keeps failing, check the
   audio permissions above, or try the other capture engine.
-- "Minnas is already running." Only one copy may run, because a second one
+- "Notarie is already running." Only one copy may run, because a second one
   would treat the live recording as interrupted. Find the first copy in the
   menu bar, or quit it from Activity Monitor, and launch again.
 - Asked for permission again after switching between a download and a source
@@ -414,7 +421,7 @@ See [SECURITY.md](SECURITY.md) for the threat model.
 - The microphone records pure silence. Check the default input in System
   Settings > Sound. If it's your iPhone through Continuity, pick another
   input.
-- Logs: `/usr/bin/log show --predicate 'subsystem == "com.jwiderberg.minnas"'`
+- Logs: `/usr/bin/log show --predicate 'subsystem == "com.jwiderberg.notarie"'`
   (the `CFBundleIdentifier` from `App/Info.plist`). In zsh, plain `log` is a
   shell builtin, hence the full path. Only notices and errors are kept.
 
@@ -422,14 +429,14 @@ See [SECURITY.md](SECURITY.md) for the threat model.
 
 ```sh
 swift build                       # compile check, no bundle
-bash scripts/make-app.sh          # build and assemble .build/Minnas.app
-swift run minnas --cleanup-test   # transcript-cleanup self-check, no models, no permissions
-swift run minnas --self-test      # delivery backoff and pruning rules
+bash scripts/make-app.sh          # build and assemble .build/Notarie.app
+swift run notarie --cleanup-test   # transcript-cleanup self-check, no models, no permissions
+swift run notarie --self-test      # delivery backoff and pruning rules
 bash scripts/test.sh              # swift-testing suite, no models, no permissions
 for f in scripts/*.sh; do bash -n "$f"; done   # shell syntax check, one file at a time
 ```
 
-The command-line harnesses run with `swift run minnas <flag>` and need no
+The command-line harnesses run with `swift run notarie <flag>` and need no
 permissions: `--transcribe <audio>`, `--retranscribe <slug>`, `--diarize
 <audio>`, `--probe-language <slug>`, `--import-file <path>`, `--deliver
 <slug> [--run]`, `--settings`, `--version`. `--list-memos` and
@@ -438,12 +445,12 @@ Disk Access (your terminal's, or the app's when run from the bundle).
 
 The capture harnesses `--mic-test <seconds> <out.caf>` and `--system-test
 <seconds> <out.caf>` need the microphone and recording grants, so run them
-from inside the built app (`.build/Minnas.app/Contents/MacOS/minnas`). The
+from inside the built app (`.build/Notarie.app/Contents/MacOS/notarie`). The
 same goes for `--calendar` (Calendars grant) and the `--settings-window`,
 `--onboarding` and `--memo-window` window harnesses. The process-tap test
 charges its grant to whichever app launched it, so start it through
 LaunchServices:
-`open -W -n -g --stdout /tmp/tap.log --stderr /tmp/tap.log .build/Minnas.app --args --tap-test 30 /tmp/tap.caf`.
+`open -W -n -g --stdout /tmp/tap.log --stderr /tmp/tap.log .build/Notarie.app --args --tap-test 30 /tmp/tap.caf`.
 Test any change to the capture code with a real run while you switch the
 default input or output device. `CLAUDE.md` holds the engineering rules.
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Engineering rules for working on Minnas (for people and for coding agents).
+Engineering rules for working on Notarie (for people and for coding agents).
 README.md is the user-facing description; SECURITY.md is the threat model.
 
 ## What it is
@@ -18,7 +18,7 @@ Pipeline:
    offer to record it.
 2. Capture: `RecordingSession` runs `MicCapture` (AVAudioEngine) and a
    `SystemAudioEngine` (`SystemAudioTapCapture` or `SystemAudioCapture`) into
-   `~/Library/Application Support/minnas/outbox/<slug>/`.
+   `~/Library/Application Support/notarie/outbox/<slug>/`.
 3. `TranscriptionJob` → `EchoCanceller` (two-stream recordings: the mic is
    echo-cancelled against the system track into a temporary 16 kHz file,
    which is what gets transcribed; see "Echo cancellation" below) →
@@ -34,22 +34,22 @@ Pipeline:
 
 ```sh
 swift build                       # compile check (no bundle); look for "Build complete"
-bash scripts/make-app.sh          # build + assemble + sign .build/Minnas.app
-open .build/Minnas.app            # launch the menubar app
-swift run minnas --cleanup-test   # transcript text filters; run after touching TranscriptBuilder
-swift run minnas --self-test      # RetrySchedule + pruning rule
+bash scripts/make-app.sh          # build + assemble + sign .build/Notarie.app
+open .build/Notarie.app            # launch the menubar app
+swift run notarie --cleanup-test   # transcript text filters; run after touching TranscriptBuilder
+swift run notarie --self-test      # RetrySchedule + pruning rule
 bash scripts/test.sh              # swift-testing suite; selects the Xcode toolchain when xcode-select points at the CLT
 for f in scripts/*.sh; do bash -n "$f"; done   # one file per bash -n: with several, bash parses only the first
 ```
 
-Tests live in `Tests/MinnasTests` (swift-testing); run them with
+Tests live in `Tests/NotarieTests` (swift-testing); run them with
 `bash scripts/test.sh`, which points `DEVELOPER_DIR` at Xcode when
 `xcode-select` names the Command Line Tools (they can't find the Testing
 module). CI runs `swift test` directly. Suites: Smoke, Lifecycle,
 TranscriptBuilder (fixtures in `TranscriptBuilderFixtures.swift`, shared
 with `--cleanup-test`), TranscriberWindow, CaptureSupport, Settings
 (+ SettingsParser, serialized because it sets environment variables),
-PaddedCAFWriter, MicPadding, EchoCanceller, StatusItemPolicy, MeetingDetails. Add tests with any logic
+PaddedCAFWriter, MicPadding, EchoCanceller, StatusItemPolicy, MeetingDetails, PreviousName. Add tests with any logic
 change.
 
 Requires Swift 6.2+ (Xcode 26, which runs on macOS 15.6+) to build; the app
@@ -66,7 +66,7 @@ local build does not prove the CI build.
 
 ## Harnesses
 
-No TCC needed (`swift run minnas …`):
+No TCC needed (`swift run notarie …`):
 `--version`, `--settings [set <name> <value>|unset <name>]` (value `-` reads
 stdin), `--transcribe <audio> [--model <id>]`, `--retranscribe <slug> [--model <id>]`
 (a cloud `--model` is the consent to send that audio), `--probe-language <slug>`
@@ -80,7 +80,7 @@ read the Voice Memos library, which needs Full Disk Access for the process
 running them (a terminal that has it, or the app bundle).
 
 Need TCC, so run the binary inside the built bundle
-(`.build/Minnas.app/Contents/MacOS/minnas …`): `--mic-test <seconds> <out.caf>`,
+(`.build/Notarie.app/Contents/MacOS/notarie …`): `--mic-test <seconds> <out.caf>`,
 `--system-test <seconds> <out.caf>` (the configured engine; kills its stream
 at the midpoint), `--audio-test`, `--calendar [within_minutes]` (EventKit),
 `--settings-window [tab] [--test-key] [--grant-calendar] [--snapshot <dir>]`,
@@ -93,7 +93,7 @@ padding proof works either way; for a real-signal check of the
 ScreenCaptureKit engine launch it like the tap test:
 
 ```sh
-open -W -n -g --stdout /tmp/sys.log --stderr /tmp/sys.log --env SYSTEM_AUDIO_ENGINE=sck .build/Minnas.app --args --system-test 30 /tmp/sys.caf
+open -W -n -g --stdout /tmp/sys.log --stderr /tmp/sys.log --env SYSTEM_AUDIO_ENGINE=sck .build/Notarie.app --args --system-test 30 /tmp/sys.caf
 ```
 
 `--tap-test <seconds> <out.caf>` exercises the process tap (signal, midpoint
@@ -102,7 +102,7 @@ Recording grant is charged to the RESPONSIBLE process, so launch it through
 LaunchServices or the terminal gets the prompt and the grant:
 
 ```sh
-open -W -n -g --stdout /tmp/tap.log --stderr /tmp/tap.log .build/Minnas.app --args --tap-test 30 /tmp/tap.caf
+open -W -n -g --stdout /tmp/tap.log --stderr /tmp/tap.log .build/Notarie.app --args --tap-test 30 /tmp/tap.caf
 ```
 
 `TAP_TEST_FAIL_RESTARTS=1` makes every tap restart fail, to check that
@@ -205,7 +205,7 @@ of a meeting while the menubar keeps saying "recording". The rules:
   `kAudioHardwarePropertyDefault{Input,Output}Device` does it). Expect the
   engine back in about a second and the file duration to match wall clock.
 - Reading the app's log from zsh: `log` is a zsh builtin — use
-  `/usr/bin/log show --predicate 'subsystem == "com.jwiderberg.minnas"'`.
+  `/usr/bin/log show --predicate 'subsystem == "com.jwiderberg.notarie"'`.
   Only `.notice`/`.error` lines persist; `.info` doesn't.
 
 ## Safety rails — keep them
@@ -240,7 +240,7 @@ of a meeting while the menubar keeps saying "recording". The rules:
   The only endpoints are OpenAI's, hard-coded https; there are no URL
   settings.
 - **Hardened runtime.** `make-app.sh` signs with `--options runtime` and
-  `App/Minnas.entitlements` (audio-input + personal-information.calendars)
+  `App/Notarie.entitlements` (audio-input + personal-information.calendars)
   and refuses a binary that links NemoTextProcessing (FluidAudio's prebuilt
   Rust library; the `Diarizer` trait must keep it out).
 - **Untrusted text.** Slugs are byte-capped (100 UTF-8 bytes), diacritic-folded
@@ -323,7 +323,7 @@ of a meeting while the menubar keeps saying "recording". The rules:
   Permissions; AppKit; every control writes through `Settings.shared`),
   `Onboarding` (4 steps on first launch, `settings.onboardingCompleted`;
   step 1 requires a transcripts folder and suggests
-  `~/Documents/Minnas Transcripts`; "Run Setup Again" in General; the
+  `~/Documents/Notarie Transcripts`; "Run Setup Again" in General; the
   calendar poll starts only after Finish), `CalendarEventKit`
   (`settings.calendarSource` off|eventkit).
 - **Distribution:** `scripts/install.sh` (build from source, local signing
@@ -335,7 +335,7 @@ of a meeting while the menubar keeps saying "recording". The rules:
 ## App bundle, TCC and the signing identity
 
 TCC permissions (microphone, system audio, screen recording, calendars) attach
-to a `CFBundleIdentifier` (`com.jwiderberg.minnas`). A bare `swift run`
+to a `CFBundleIdentifier` (`com.jwiderberg.notarie`). A bare `swift run`
 binary has none, so anything that calls AVAudioEngine, a process tap,
 ScreenCaptureKit or EventKit must run from inside the `.app`.
 `App/Info.plist` is the editable source of truth; `make-app.sh` copies it into
@@ -358,7 +358,7 @@ the bundle on every build. Don't edit the built copy.
 - **Stable signing identity.** TCC keys grants off the code signature. Ad-hoc
   signatures change on every rebuild, which macOS treats as a new app, so the
   grants reset. `bash scripts/setup-signing-identity.sh` (one-time) creates a
-  "Minnas Dev" identity in the login keychain (10-year self-signed cert with
+  "Notarie Dev" identity in the login keychain (10-year self-signed cert with
   `codeSigning` extKeyUsage, key imported non-extractable with a
   codesign-only ACL). `make-app.sh` auto-detects it; without it, it signs
   ad-hoc and prints a warning. Re-running the setup script is a no-op.
@@ -497,6 +497,13 @@ before building. Secrets: `DEVELOPER_ID_P12_BASE64`, `DEVELOPER_ID_P12_PASSWORD`
 value). Dry run without publishing: `gh workflow run release.yml -f publish=false`
 (zip lands as a workflow artifact). The Developer ID intermediate CA is
 fetched from apple.com and checked against a pinned SHA-256 in the workflow.
-Source builds keep the local "Minnas Dev" identity; a user who switches
+The app was called Minnas until 0.3.0 (bundle id `com.jwiderberg.minnas`,
+`~/Library/Application Support/minnas/`). `PreviousName` moves that state
+in on the first launch (folder, settings, Keychain secrets; not the TCC
+grants, which follow the bundle id, nor "setup done", so setup asks for
+them), and refuses to start while Minnas runs. Keep it until few people
+can still be on Minnas.
+
+Source builds keep the local "Notarie Dev" identity; a user who switches
 between a download and a source build re-grants TCC, because the signatures
 differ.

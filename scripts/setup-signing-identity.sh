@@ -12,7 +12,7 @@
 # across rebuilds, so TCC grants persist.
 #
 # Side effects:
-#   - Creates ~/Library/Keychains/login.keychain-db entry "Minnas Dev"
+#   - Creates ~/Library/Keychains/login.keychain-db entry "Notarie Dev"
 #     (10-year self-signed cert, code-signing extKeyUsage)
 #   - You will be prompted for your login keychain password ONCE so
 #     codesign can use the key without further prompts.
@@ -22,7 +22,7 @@
 #
 set -euo pipefail
 
-IDENTITY_NAME="Minnas Dev"
+IDENTITY_NAME="Notarie Dev"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 if security find-identity -p codesigning -v "$KEYCHAIN" 2>/dev/null | grep -q "$IDENTITY_NAME"; then

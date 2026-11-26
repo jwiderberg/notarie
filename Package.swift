@@ -1,6 +1,6 @@
 // swift-tools-version:6.2
 //
-// Minnas — native Mac menubar app for local-first meeting transcription.
+// Notarie — native Mac menubar app for local-first meeting transcription.
 // Floor is macOS 15: everything the app uses (ScreenCaptureKit audio, Core
 // Audio process taps, WhisperKit, FluidAudio, EventKit full access) exists
 // there, and Xcode 26 / Swift 6.2 — needed to BUILD it — itself runs on
@@ -24,12 +24,12 @@ let webrtcSettings: (c: [CSetting], cxx: [CXXSetting]) = {
 }()
 
 let package = Package(
-    name: "minnas",
+    name: "notarie",
     platforms: [
         .macOS(.v15),
     ],
     products: [
-        .executable(name: "minnas", targets: ["Minnas"]),
+        .executable(name: "notarie", targets: ["Notarie"]),
     ],
     dependencies: [
         // WhisperKit: on-device transcription via Whisper models running
@@ -64,13 +64,13 @@ let package = Package(
             cxxSettings: webrtcSettings.cxx
         ),
         .executableTarget(
-            name: "Minnas",
+            name: "Notarie",
             dependencies: [
                 "CWebRTCAEC",
                 .product(name: "WhisperKit", package: "WhisperKit"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ],
-            path: "Sources/Minnas"
+            path: "Sources/Notarie"
         ),
         // swift-testing (`import Testing`). `swift test` needs the Xcode
         // toolchain selected: with only the Command Line Tools active the
@@ -78,9 +78,9 @@ let package = Package(
         // around. The executable target is imported @testable; SwiftPM
         // renames its entry point.
         .testTarget(
-            name: "MinnasTests",
-            dependencies: ["Minnas"],
-            path: "Tests/MinnasTests"
+            name: "NotarieTests",
+            dependencies: ["Notarie"],
+            path: "Tests/NotarieTests"
         ),
     ],
     cxxLanguageStandard: .cxx17

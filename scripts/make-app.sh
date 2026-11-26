@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# Build minnas and assemble a minimal .app bundle.
+# Build notarie and assemble a minimal .app bundle.
 #
 # Why the wrapper: TCC (microphone, screen recording) attaches permissions
 # to a CFBundleIdentifier. A raw `swift run` binary has none, so the system
 # can't durably remember the user's grant — every launch would re-prompt.
 # This script builds the binary and drops it into a hand-rolled .app shell
 # with App/Info.plist, then signs it (hardened runtime,
-# App/Minnas.entitlements) with the local "Minnas Dev"
+# App/Notarie.entitlements) with the local "Notarie Dev"
 # identity if present, else ad-hoc.
 #
 # CODESIGN_IDENTITY=<name> signs with that identity instead, and
@@ -17,7 +17,7 @@
 # skips every Swift invocation and assembles the existing .build/$CONFIG binary.
 # This lets release automation finish building before a signing key is in reach.
 #
-# Output: .build/Minnas.app — launch with `open .build/Minnas.app`.
+# Output: .build/Notarie.app — launch with `open .build/Notarie.app`.
 #
 # Run as: bash scripts/make-app.sh
 #
@@ -27,18 +27,18 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 CONFIG="${CONFIG:-release}"
-APP_NAME="Minnas"
+APP_NAME="Notarie"
 APP_DIR=".build/${APP_NAME}.app"
-EXECUTABLE_NAME="minnas"
+EXECUTABLE_NAME="notarie"
 INFO_PLIST="App/Info.plist"
-ENTITLEMENTS="App/Minnas.entitlements"
+ENTITLEMENTS="App/Notarie.entitlements"
 
 if [[ ! -f "$INFO_PLIST" ]]; then
     echo "FAIL: $INFO_PLIST is missing." >&2
     exit 1
 fi
 
-IDENTITY_NAME="Minnas Dev"
+IDENTITY_NAME="Notarie Dev"
 # Validate the signing request before the old bundle is torn down, so a bad
 # CODESIGN_IDENTITY or CODESIGN_KEYCHAIN cannot leave an unsigned bundle in
 # place of a working one.

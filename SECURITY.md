@@ -1,6 +1,6 @@
 # Security
 
-## What Minnas is, for the purpose of a threat model
+## What Notarie is, for the purpose of a threat model
 
 A single-user Mac app. It runs as you, and macOS has given it the right to
 hear your microphone and the audio your Mac plays (the System Audio Recording
@@ -20,12 +20,12 @@ The assets worth protecting are therefore:
 ## Who the design defends against
 
 **Other software running as you.** This is the main case. Any process under
-your account can already read your files, and Minnas can't hide transcripts
-from it. What Minnas can do is stop that process borrowing the app's
+your account can already read your files, and Notarie can't hide transcripts
+from it. What Notarie can do is stop that process borrowing the app's
 microphone and recording permissions, or reading the key:
 
 - **Hardened runtime.** The app is signed with the hardened runtime and a
-  minimal entitlements file (`App/Minnas.entitlements`: audio input, and
+  minimal entitlements file (`App/Notarie.entitlements`: audio input, and
   calendar access for the optional calendar prompts). Other processes cannot
   inject libraries into it or attach a debugger to read its memory.
 - **A signing key that cannot be exported.** The local signing identity that
@@ -81,7 +81,7 @@ fixed.
 ## What we do not protect against
 
 - **A same-user attacker who calls `codesign` with the local identity.** That
-  can produce an app macOS treats as Minnas. Keep the identity only if you
+  can produce an app macOS treats as Notarie. Keep the identity only if you
   accept that, or build with `--no-identity` and re-grant permissions per build.
 - **Someone with your logged-in session or your Mac unlocked.** They can read
   your recordings and transcripts, which are ordinary files. Use FileVault and a
@@ -122,7 +122,7 @@ What that lets you check (commands in the README under "Verify a download"):
   repository's release workflow from that commit. The statement is signed by
   GitHub through Sigstore; the repository cannot forge it after the fact.
   Run it with `--source-ref refs/tags/v<version>` and `--signer-workflow
-  jwiderberg/minnas/.github/workflows/release.yml`, as the README shows. That
+  jwiderberg/notarie/.github/workflows/release.yml`, as the README shows. That
   rules out a file built from a branch or by another workflow.
 - `spctl --assess` says Apple's notary service scanned the binary and that it
   is signed by a Developer ID certificate. The Team ID is in the release notes.
@@ -139,13 +139,13 @@ would still name the commit and workflow that produced it, so a build that did
 not come from a tagged commit on this repository is detectable when you verify
 with the options above; Apple can
 revoke the certificate; and every notarized build is on record with Apple.
-The local "Minnas Dev" identity used for source builds is a separate key that
+The local "Notarie Dev" identity used for source builds is a separate key that
 never leaves your Mac.
 
 ## Reporting a vulnerability
 
 Please report privately through a GitHub security advisory on the repository:
-<https://github.com/jwiderberg/minnas/security/advisories/new>
+<https://github.com/jwiderberg/notarie/security/advisories/new>
 
 Include what you found, how to reproduce it, and the macOS version. Please do
 not open a public issue for something that exposes recordings or keys. This is

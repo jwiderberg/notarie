@@ -62,10 +62,10 @@ jobs:
 
       # Text-cleanup self-check. Needs no models, no microphone, no TCC.
       - name: Self-check (--cleanup-test)
-        run: swift run minnas --cleanup-test
+        run: swift run notarie --cleanup-test
 
       - name: Self-check (--self-test)
-        run: swift run minnas --self-test
+        run: swift run notarie --self-test
 
       # One file per bash -n: with several arguments bash parses only the
       # first and treats the rest as that script's arguments.

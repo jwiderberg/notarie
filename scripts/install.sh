@@ -2,7 +2,7 @@
 #
 # Build the app from source and install it. Run from a clone:
 #
-#   git clone https://github.com/jwiderberg/minnas.git && cd minnas
+#   git clone https://github.com/jwiderberg/notarie.git && cd notarie
 #   bash scripts/install.sh
 #
 # Never pipe this into a shell. Read it first; it is short.
@@ -270,7 +270,7 @@ quote() { fold -s -w 70 <<<"\"$1\"" | sed -e 's/ *$//' -e 's/^/           /'; }
 cat <<EOF
     $DISPLAY_NAME ($BUNDLE_ID) lives in the menu bar (no Dock icon). The setup
     window opens on first launch and asks where transcripts go (it suggests
-    ~/Documents/Minnas Transcripts).
+    ~/Documents/Notarie Transcripts).
 
     Permission prompts. macOS shows the app's own explanation with each. The
     microphone comes during setup (step 2 of 4), the system audio one with your

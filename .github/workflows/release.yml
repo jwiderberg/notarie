@@ -1,6 +1,6 @@
 name: Release
 
-# Builds a notarized Minnas.app from a tagged commit and publishes it.
+# Builds a notarized Notarie.app from a tagged commit and publishes it.
 #
 # Trigger with a tag:   git tag v0.1.0 && git push origin v0.1.0
 # The tag must equal "v" + CFBundleShortVersionString in App/Info.plist.
@@ -12,13 +12,13 @@ name: Release
 # gets the publish job, and only that job can attest.
 #
 # What a user can verify afterwards, and what each check proves:
-#   shasum -a 256 -c Minnas-<v>.zip.sha256      the download is intact
-#   gh attestation verify Minnas-<v>.zip --repo jwiderberg/minnas \
+#   shasum -a 256 -c Notarie-<v>.zip.sha256      the download is intact
+#   gh attestation verify Notarie-<v>.zip --repo jwiderberg/notarie \
 #       --source-ref refs/tags/v<v> \
-#       --signer-workflow jwiderberg/minnas/.github/workflows/release.yml
+#       --signer-workflow jwiderberg/notarie/.github/workflows/release.yml
 #                                              THIS workflow built THIS file
 #                                              from the tagged commit (Sigstore)
-#   spctl --assess --type execute Minnas.app   Apple notarized it; the
+#   spctl --assess --type execute Notarie.app   Apple notarized it; the
 #                                              signature is a Developer ID
 #
 # Secrets (set them with scripts/release-secrets.sh):
@@ -111,7 +111,7 @@ jobs:
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "artifact=Minnas-$VERSION.zip" >> "$GITHUB_OUTPUT"
+          echo "artifact=Notarie-$VERSION.zip" >> "$GITHUB_OUTPUT"
 
       - name: Cache .build
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -195,9 +195,9 @@ jobs:
       - name: Inspect signature
         run: |
           set -euo pipefail
-          codesign --verify --deep --strict --verbose=2 .build/Minnas.app
-          codesign -dvv .build/Minnas.app 2>&1 | grep -E '^(Identifier|TeamIdentifier|Authority|Timestamp|Runtime Version)='
-          codesign -d --entitlements - --xml .build/Minnas.app | plutil -p -
+          codesign --verify --deep --strict --verbose=2 .build/Notarie.app
+          codesign -dvv .build/Notarie.app 2>&1 | grep -E '^(Identifier|TeamIdentifier|Authority|Timestamp|Runtime Version)='
+          codesign -d --entitlements - --xml .build/Notarie.app | plutil -p -
 
       - name: Notarize
         env:
@@ -214,7 +214,7 @@ jobs:
           KEY="$RUNNER_TEMP/AuthKey.p8"
           printf '%s' "$NOTARY_KEY_P8_BASE64" | base64 --decode > "$KEY"
           UPLOAD="$RUNNER_TEMP/notarize.zip"
-          ditto -c -k --keepParent .build/Minnas.app "$UPLOAD"
+          ditto -c -k --keepParent .build/Notarie.app "$UPLOAD"
 
           xcrun notarytool submit "$UPLOAD" \
             --key "$KEY" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID" \
@@ -250,11 +250,11 @@ jobs:
             echo "::error::'$*' failed 6 times"
             return 1
           }
-          retry xcrun stapler staple .build/Minnas.app
-          retry xcrun stapler validate .build/Minnas.app
+          retry xcrun stapler staple .build/Notarie.app
+          retry xcrun stapler validate .build/Notarie.app
           # Gatekeeper's own verdict. "Notarized Developer ID" is the only
           # acceptable source for a download.
-          spctl --assess --type execute --verbose=2 .build/Minnas.app 2>&1 | tee "$RUNNER_TEMP/spctl.txt"
+          spctl --assess --type execute --verbose=2 .build/Notarie.app 2>&1 | tee "$RUNNER_TEMP/spctl.txt"
           grep -q 'source=Notarized Developer ID' "$RUNNER_TEMP/spctl.txt"
 
       - name: Package
@@ -264,9 +264,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$DIST"
-          ditto -c -k --keepParent .build/Minnas.app "$DIST/$ARTIFACT"
+          ditto -c -k --keepParent .build/Notarie.app "$DIST/$ARTIFACT"
           (cd "$DIST" && shasum -a 256 "$ARTIFACT" > "$ARTIFACT.sha256" && cat "$ARTIFACT.sha256")
-          TEAM="$(codesign -dvv .build/Minnas.app 2>&1 | sed -nE 's/^TeamIdentifier=(.*)$/\1/p')"
+          TEAM="$(codesign -dvv .build/Notarie.app 2>&1 | sed -nE 's/^TeamIdentifier=(.*)$/\1/p')"
           echo "team=$TEAM" >> "$GITHUB_OUTPUT"
 
       # The zip goes to the publish job (a tag) or stays for inspection (a dry
@@ -330,9 +330,9 @@ jobs:
           set -euo pipefail
           SHA="$(cut -d' ' -f1 "$DIST/$ARTIFACT.sha256")"
           cat > "$RUNNER_TEMP/notes.md" <<EOF
-          Minnas $VERSION, built by this repository's release workflow from commit \`${GITHUB_SHA}\`, signed with a Developer ID certificate and notarized by Apple.
+          Notarie $VERSION, built by this repository's release workflow from commit \`${GITHUB_SHA}\`, signed with a Developer ID certificate and notarized by Apple.
 
-          **Install:** download \`$ARTIFACT\`, unzip, move Minnas.app to /Applications, open it. macOS 15 or newer on Apple silicon. The first run walks through the permissions; see the README.
+          **Install:** download \`$ARTIFACT\`, unzip, move Notarie.app to /Applications, open it. macOS 15 or newer on Apple silicon. The first run walks through the permissions; see the README.
 
           **Verify** (each line proves one thing):
 
@@ -343,8 +343,8 @@ jobs:
               --signer-workflow ${GITHUB_REPOSITORY}/.github/workflows/release.yml
                                                        # this exact file was built by this
                                                        # workflow from the tagged commit
-          spctl --assess --type execute -vv Minnas.app  # "accepted source=Notarized Developer ID"
-          codesign -dvv Minnas.app 2>&1 | grep TeamIdentifier   # TeamIdentifier=$TEAM
+          spctl --assess --type execute -vv Notarie.app  # "accepted source=Notarized Developer ID"
+          codesign -dvv Notarie.app 2>&1 | grep TeamIdentifier   # TeamIdentifier=$TEAM
           \`\`\`
 
           SHA-256: \`$SHA\`
@@ -361,7 +361,7 @@ jobs:
           set -euo pipefail
           gh release create "$GITHUB_REF_NAME" "$DIST"/* \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Minnas $VERSION" \
+            --title "Notarie $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --verify-tag
 
