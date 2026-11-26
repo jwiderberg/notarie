@@ -2,7 +2,7 @@
 
 Notarie is a Mac menubar app that records your meetings, transcribes them on
 the Mac itself, and drops the result as a Markdown file into a folder you
-pick. "Notarie" is Swedish for the person who keeps the minutes.
+pick.
 
 ## Getting started
 
