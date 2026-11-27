@@ -78,12 +78,21 @@ enum TranscriptBuilder {
     /// its diarized segments are labelled "Speaker (A)" etc. instead of "Me"
     /// (when at least two voices were found), and the few words the system
     /// track had (a notification, not a person) are "System audio".
+    /// `call`: what the call window showed (CallEvidence): names for the
+    /// diarized voices, the other person in a 1:1 call, spelling, and
+    /// caption lines no segment covers.
     static func build(
         meta: RecordingMeta,
         micResults: [STTResult],
         systemResults: [STTResult],
-        roomOnMic: Bool = false
+        roomOnMic: Bool = false,
+        call: CallEvidence? = nil
     ) -> Output {
+        var systemResults = systemResults
+        if let fills = call?.captionFills, !fills.isEmpty, !roomOnMic {
+            systemResults.append(STTResult(segments: fills, language: systemResults.first?.language ?? "en"))
+        }
+        let corrections = call?.corrections ?? [:]
         // A phone voice memo or an imported file is one stream with everyone
         // in it — "Them" would be wrong (it includes the operator), so label
         // it neutrally.
@@ -110,7 +119,7 @@ enum TranscriptBuilder {
                         speaker: speaker,
                         start: segment.start + shifts.mic,
                         end: segment.end + shifts.mic,
-                        text: segment.text,
+                        text: CallEvidenceBuilder.applyCorrections(segment.text, corrections),
                         language: result.language
                     )
                 )
@@ -120,6 +129,11 @@ enum TranscriptBuilder {
         // system stream IS that person — name them instead of "Them" (no
         // voice-ID needed). Multi-person meetings keep "Them (A)".
         let themName = Self.soleOtherAttendeeName(meta.attendees)
+        let voiceNames = call?.voiceNames ?? [:]
+        // The call window's roster: one other person on screen names the
+        // whole stream, like a 1:1 invite does (the invite wins).
+        let screenThem = voiceNames.isEmpty || voiceNames.keys.allSatisfy { $0.hasPrefix(CallEvidenceBuilder.captionSpeakerPrefix) }
+            ? call?.soleOther : nil
         let systemShift = shifts.system
         for result in systemResults {
             for segment in result.segments {
@@ -134,6 +148,10 @@ enum TranscriptBuilder {
                     speaker = "System audio"
                 } else if let themName, !meta.isSingleStream {
                     speaker = themName
+                } else if let id = segment.speaker?.trimmingCharacters(in: .whitespaces), let name = voiceNames[id] {
+                    speaker = name
+                } else if let screenThem, !meta.isSingleStream {
+                    speaker = screenThem
                 } else if let id = segment.speaker?.trimmingCharacters(in: .whitespaces), !id.isEmpty {
                     speaker = "\(systemLabel) (\(id))"
                 } else {
@@ -144,7 +162,7 @@ enum TranscriptBuilder {
                         speaker: speaker,
                         start: segment.start + systemShift,
                         end: segment.end + systemShift,
-                        text: segment.text,
+                        text: CallEvidenceBuilder.applyCorrections(segment.text, corrections),
                         language: result.language
                     )
                 )

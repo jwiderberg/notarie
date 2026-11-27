@@ -185,11 +185,17 @@ enum TranscriptionJob {
         if roomOnMic {
             jobLog.notice("\(slot.slug, privacy: .public): no speech on the system track; the mic's voices are separated as an in-room meeting")
         }
+        // What the call window showed (names on the tiles, the highlighted
+        // speaker, captions), when the recording read it.
+        let call = roomOnMic ? nil : CallEvidenceBuilder.evidence(slot: slot, meta: meta, micResults: micResults, systemResults: systemResults)
+        if let call {
+            jobLog.notice("\(slot.slug, privacy: .public): call window: \(call.others.count, privacy: .public) other participant(s), \(call.voiceNames.count, privacy: .public) voice(s) named, \(call.corrections.count, privacy: .public) spelling fix(es), \(call.captionFills.count, privacy: .public) caption fill(s)")
+        }
 
         return try finish(
             slot: slot, meta: meta, micResults: micResults, systemResults: systemResults,
             provenance: TranscriptionProvenance(engine: model.engine.rawValue, model: model.rawValue, transcribed_at: Date()),
-            roomOnMic: roomOnMic
+            roomOnMic: roomOnMic, call: call
         )
     }
 
@@ -221,14 +227,16 @@ enum TranscriptionJob {
         micResults: [STTResult],
         systemResults: [STTResult],
         provenance: TranscriptionProvenance,
-        roomOnMic: Bool = false
+        roomOnMic: Bool = false,
+        call: CallEvidence? = nil
     ) throws -> TranscriptBuilder.Output {
         // Imports and slots made by older code may carry an un-normalised
         // title; the transcript's heading, frontmatter and the folder file
         // name all come from it, so bound it here too.
         var meta = meta
         meta.title = Outbox.normalizeTitle(meta.title)
-        let output = TranscriptBuilder.build(meta: meta, micResults: micResults, systemResults: systemResults, roomOnMic: roomOnMic)
+        let output = TranscriptBuilder.build(meta: meta, micResults: micResults, systemResults: systemResults,
+                                             roomOnMic: roomOnMic, call: call)
         // Segment sanity check before anything is written: a NaN, negative or
         // reversed timestamp means the engine returned garbage, and a
         // transcript ordered by it would be nonsense. The audio stays, so

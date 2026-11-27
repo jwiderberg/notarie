@@ -171,6 +171,9 @@ struct CaptureHealth: Codable, Sendable {
     /// one timeline: the transcript's ordering and the echo canceller's
     /// search window. nil for recordings made before it was recorded.
     var system_start_offset_seconds: Double? = nil
+    /// Host-clock seconds of the mic file's first sample: puts the call
+    /// window's frames (call.jsonl, host-stamped) on the mic timeline.
+    var mic_start_host_seconds: Double? = nil
 }
 
 extension CaptureHealth {

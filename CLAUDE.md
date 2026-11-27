@@ -49,7 +49,7 @@ module). CI runs `swift test` directly. Suites: Smoke, Lifecycle,
 TranscriptBuilder (fixtures in `TranscriptBuilderFixtures.swift`, shared
 with `--cleanup-test`), TranscriberWindow, CaptureSupport, Settings
 (+ SettingsParser, serialized because it sets environment variables),
-PaddedCAFWriter, MicPadding, EchoCanceller, StatusItemPolicy, MeetingDetails, PreviousName. Add tests with any logic
+PaddedCAFWriter, MicPadding, EchoCanceller, StatusItemPolicy, MeetingDetails, PreviousName, CallWindow. Add tests with any logic
 change.
 
 Requires Swift 6.2+ (Xcode 26, which runs on macOS 15.6+) to build; the app
@@ -303,6 +303,19 @@ of a meeting while the menubar keeps saying "recording". The rules:
   threshold). `CoreAudioHAL.swift`: the Core Audio property helpers used by
   the taps engine and `AudioRoute` (the default devices, for logs and
   harnesses; any HAL failure → nil).
+- **Call window** (`CallObserver`, `CallWindow.swift`, `CallFrames.swift`,
+  `CallEvidence.swift`; `READ_CALL_WINDOW`, default off; needs Screen
+  Recording): while recording, every 2 s, screenshot the meeting window
+  alone, OCR it with Vision and append the derived text (tile names, the
+  operator's tile, the highlighted tile, named caption lines, screen words;
+  no pixels) to the slot's `call.jsonl`. After diarization
+  `CallEvidenceBuilder` names the "Them" voices (frames with one remote
+  highlight vote for the voice speaking then; captions that match a
+  segment's words vote twice; ≥ 2 votes and ≥ half), names the other person
+  in a 1:1 from the roster, fixes spellings one or two edits from a screen
+  word (never a dictionary word), and adds named caption lines no segment
+  covers as `[captions] …`. Harnesses: `--call-snapshot`, `--call-test`,
+  `--call-test-replay` (run from the bundle with `open -n`).
 - **Full meeting details** (`MeetingDetails`, `MARKDOWN_MEETING_DETAILS` /
   `markdownFullMeetingDetails`, default off): the event's location and
   notes are stored in meta (`calendar_location`, `calendar_notes`) whenever a recording is tagged; with the setting on,

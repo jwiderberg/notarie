@@ -156,6 +156,10 @@ enum Config {
     /// disable). Default on. The cloud model diarizes on its own.
     static func diarizationEnabled() -> Bool { get(Setting.diarizeEnabled) }
 
+    /// Whether a recording reads the call window for speaker names
+    /// (CallObserver). Default off; needs the Screen Recording grant.
+    static func readCallWindow() -> Bool { get(Setting.readCallWindow) }
+
     /// Whether the mic track is echo-cancelled against the system track
     /// before transcription (ECHO_CANCEL, default on). See EchoCanceller.
     static func echoCancellationEnabled() -> Bool { get(Setting.echoCancellationEnabled) }

@@ -138,6 +138,15 @@ when organising and gives LLMs useful context.
   further into "Them (A)", "Them (B)" and so on. A meeting held in the room,
   with no call, has everyone on the microphone; then the microphone's voices
   are split into "Speaker (A)", "Speaker (B)" instead.
+- With "Read the call window for names" on (Settings › Transcription), the
+  recorder also reads the meeting window while it records: the names on the
+  video tiles, who is highlighted as speaking, and live captions if they are
+  turned on. Afterwards "Them (A)" becomes the person's name, the other
+  person in a 1:1 call is named even without a calendar invite, names are
+  spelled the way the screen spells them, and a caption line the
+  transcription missed is added, marked `[captions]`. It needs the Screen
+  Recording permission. Only the text is kept, on your Mac; the screenshots
+  are thrown away as soon as they are read.
 - When the call plays on the Mac's speakers, your microphone hears the other
   side too. Before transcribing, the recorder removes their voice from your
   track with WebRTC's echo canceller (the one in Chrome and Meet), using the
@@ -285,7 +294,8 @@ calendar). The table below is every permission it can ask for.
 | --- | --- | --- | --- |
 | Microphone | Your side of the meeting. | During setup, or the first time you start a recording. | Nothing can be recorded. |
 | System Audio Recording (the default capture engine) | The other participants' side, through a Core Audio process tap. Audio only. | The first time you start a recording. | Your microphone is still captured, but the other side is empty (the tap delivers silence). The app warns when a track is silent after 15 seconds. |
-| Screen Recording (only if you switch to the ScreenCaptureKit engine) | The same, through ScreenCaptureKit, which macOS files under Screen & System Audio Recording. Audio only; the screen is never captured. | The first recording after you switch. | The recording does not start and the app says "Couldn't start recording." Only the default engine carries on with your microphone and an empty other side. The app also alerts if the stream cannot be restarted. |
+| Screen Recording (only if you switch to the ScreenCaptureKit engine) | The same, through ScreenCaptureKit, which macOS files under Screen & System Audio Recording. Audio only; the screen is captured only by the call-window option below. | The first recording after you switch. | The recording does not start and the app says "Couldn't start recording." Only the default engine carries on with your microphone and an empty other side. The app also alerts if the stream cannot be restarted. |
+| Screen Recording (optional, for "Read the call window for names") | A screenshot of the meeting window every 2 seconds while recording, read on the Mac for names, the active speaker and captions. Only the text is kept. | The first recording after you turn the option on. | Speakers keep their letters ("Them (A)"). |
 | Calendars (optional) | Prompt you before meetings and name the other person in a 1:1. | When you choose "macOS Calendar" as the calendar source and press Grant Calendar Access (setup, or Settings > Calendar). | No prompts. You start recordings from the menu. |
 | Full Disk Access (optional) | Read iPhone memos in the Voice Memos library. macOS never prompts for it. | The app appears, switched off, under System Settings > Privacy & Security > Full Disk Access after the first import attempt. | "Import Voice Memos" cannot read the library. Recording and file import are unaffected. |
 

@@ -16,7 +16,7 @@
 
 import Foundation
 
-struct STTSegment: Sendable {
+struct STTSegment: Sendable, Equatable {
     let start: Float    // seconds from the start of the audio file
     let end: Float
     let text: String

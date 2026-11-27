@@ -22,6 +22,7 @@ import Testing
     systemAudioExcludedBundleIDs|settings.systemAudioExcludedBundleIDs|SYSTEM_AUDIO_EXCLUDE_BUNDLES|list
     systemAudioEngine|settings.systemAudioEngine|SYSTEM_AUDIO_ENGINE|choice(taps,sck)
     diarizeEnabled|settings.diarizeEnabled|DIARIZE|bool
+    readCallWindow|settings.readCallWindow|READ_CALL_WINDOW|bool
     echoCancellationEnabled|settings.echoCancellationEnabled|ECHO_CANCEL|bool
     markdownFullMeetingDetails|settings.markdownFullMeetingDetails|MARKDOWN_MEETING_DETAILS|bool
     voiceMemoUsesAppleTranscript|settings.voiceMemoUsesAppleTranscript|VOICE_MEMO_TRANSCRIPT|bool
@@ -61,7 +62,7 @@ import Testing
     @Test func defaultDisplayIsFrozen() {
         let golden = [
             "(off)", "30", "10", "large-v3", "auto", "en", "0.2", "false", "off",
-            "(none)", "taps", "true", "true", "false", "false", "false", "(unset)",
+            "(none)", "taps", "true", "false", "true", "false", "false", "false", "(unset)",
             "false", "(unset)",
         ]
         #expect(SettingKey.allCases.map(Self.defaultDisplay) == golden)

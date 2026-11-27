@@ -14,6 +14,8 @@
 
 import AppKit
 import Foundation
+import ImageIO
+@preconcurrency import ScreenCaptureKit
 
 if CommandLine.arguments.contains("--version") {
     print("notarie \(AppInfo.version)")
@@ -712,6 +714,205 @@ if let idx = CommandLine.arguments.firstIndex(of: "--diarize") {
             exit(0)
         } catch {
             FileHandle.standardError.write(Data("diarize failed: \(error)\n".utf8))
+            exit(1)
+        }
+    }
+    dispatchMain()
+}
+
+// The call window, read once or for a while (Screen Recording grant:
+// run from the bundle with `open -n`, or from a terminal that has it).
+//   --call-snapshot [--title <text>] [--watch <seconds> <dir>] [--save <dir>] [--lines]
+//   --call-snapshot --image <file> [--lines]     analyse a saved screenshot
+// --title takes any window whose title contains the text (a recorded call
+// playing in a browser, say). --watch appends one frame per 2 s to
+// <dir>/call.jsonl. --save also writes each screenshot as a PNG (harness
+// only; the app never keeps pictures).
+if CommandLine.arguments.contains("--call-snapshot") {
+    let args = CommandLine.arguments
+    func value(after flag: String) -> String? {
+        guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+    let showLines = args.contains("--lines")
+    func report(_ frame: CallFrame, lines: [OCRLine]?, seconds: Double) {
+        if showLines, let lines {
+            for l in lines { print(String(format: "  %5.0f,%5.0f %4.0fx%-3.0f %.2f  %@", l.x, l.y, l.width, l.height, l.confidence, l.text)) }
+        }
+        print("[\(frame.app)] \(String(format: "%.2f", seconds))s participants=\(frame.participants) me=\(frame.me ?? "-") active=\(frame.active)")
+        for c in frame.captions { print("  caption \(c.speaker ?? "?"): \(c.text)") }
+        if !frame.words.isEmpty { print("  words: \(frame.words.prefix(30).joined(separator: ", "))") }
+    }
+    func analyze(_ image: CGImage, app: String) throws -> (CallFrame, [OCRLine], Double) {
+        let started = Date()
+        let lines = try CallFrameReader.recognize(image)
+        let frame = CallFrameAnalyzer.analyze(lines: lines, width: Double(image.width), height: Double(image.height),
+                                              app: app, host: Double(mach_absolute_time()) / HostClock.ticksPerSecond,
+                                              wall: Date(), sample: CallFrameReader.sampler(image))
+        return (frame, lines, Date().timeIntervalSince(started))
+    }
+    if let path = value(after: "--image") {
+        guard let src = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(src, 0, nil) else {
+            FileHandle.standardError.write(Data("can't read \(path)\n".utf8)); exit(1)
+        }
+        do {
+            let (frame, lines, seconds) = try analyze(image, app: "Image")
+            if args.contains("--debug") {
+                let sample = CallFrameReader.sampler(image)
+                for l in lines where CallFrameAnalyzer.nameLabel(l.text) != nil {
+                    let st = CallFrameAnalyzer.backdropStats(l, sample: sample)
+                    let hue = CallFrameAnalyzer.highlightHue(near: l, sample: sample)
+                    print(String(format: "  %-22@ conf=%.2f light=%.2f rest=%.2f hue=%@ h=%.0f", l.text, l.confidence, st.lightShare, st.restMean, hue.map(String.init) ?? "-", l.height))
+                }
+            }
+            report(frame, lines: lines, seconds: seconds)
+            exit(0)
+        } catch { FileHandle.standardError.write(Data("ocr failed: \(error)\n".utf8)); exit(1) }
+    }
+    let titleOverride = value(after: "--title")
+    let saveDir = value(after: "--save").map { URL(fileURLWithPath: $0, isDirectory: true) }
+    var watchSeconds: Double?
+    var watchDir: URL?
+    if let i = args.firstIndex(of: "--watch"), i + 2 < args.count, let s = Double(args[i + 1]) {
+        watchSeconds = s
+        watchDir = URL(fileURLWithPath: args[i + 2], isDirectory: true)
+    }
+    // ScreenCaptureKit's screenshot needs the window server connection an
+    // app has; a bare process must set it up first.
+    _ = NSApplication.shared
+    Task {
+        do {
+            if args.contains("--list") {
+                let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
+                let rows = content.windows.filter { $0.windowLayer == 0 && $0.frame.width >= 320 }.map {
+                    "\($0.owningApplication?.bundleIdentifier ?? "?") onScreen=\($0.isOnScreen) \(Int($0.frame.width))x\(Int($0.frame.height)) \"\($0.title ?? "nil")\""
+                }
+                rows.forEach { print($0) }
+                exit(0)
+            }
+            guard let choice = try await CallWindowLocator.find(titleOverride: titleOverride) else {
+                print("no call window found"); exit(3)
+            }
+            print("window: \(choice.app) · \(choice.bundleID) · \"\(choice.title)\" · \(Int(choice.window.frame.width))x\(Int(choice.window.frame.height)) pt")
+            if let saveDir { try FileManager.default.createDirectory(at: saveDir, withIntermediateDirectories: true) }
+            var logHandle: FileHandle?
+            if let watchDir {
+                try FileManager.default.createDirectory(at: watchDir, withIntermediateDirectories: true)
+                let url = watchDir.appendingPathComponent(CallFrameLog.fileName)
+                if !FileManager.default.fileExists(atPath: url.path) { FileManager.default.createFile(atPath: url.path, contents: nil) }
+                logHandle = try FileHandle(forWritingTo: url)
+                try logHandle?.seekToEnd()
+            }
+            let end = Date().addingTimeInterval(watchSeconds ?? 0)
+            var n = 0
+            repeat {
+                let tick = Date()
+                let captureStart = Date()
+                let image = try await CallWindowLocator.capture(choice)
+                let captureSeconds = Date().timeIntervalSince(captureStart)
+                let (frame, lines, seconds) = try analyze(image, app: choice.app)
+                n += 1
+                print("frame \(n): \(image.width)x\(image.height) px, capture \(String(format: "%.2f", captureSeconds))s")
+                report(frame, lines: lines, seconds: seconds)
+                if let saveDir, let dest = CGImageDestinationCreateWithURL(
+                    saveDir.appendingPathComponent(String(format: "frame-%04d.png", n)) as CFURL, "public.png" as CFString, 1, nil) {
+                    CGImageDestinationAddImage(dest, image, nil)
+                    CGImageDestinationFinalize(dest)
+                }
+                try logHandle?.write(contentsOf: CallFrameLog.encode(frame))
+                let wait = 2 - Date().timeIntervalSince(tick)
+                if watchSeconds != nil, wait > 0 { try await Task.sleep(for: .seconds(wait)) }
+            } while watchSeconds != nil && Date() < end
+            exit(0)
+        } catch {
+            FileHandle.standardError.write(Data("call snapshot failed: \(error)\n".utf8))
+            exit(1)
+        }
+    }
+    dispatchMain()
+}
+
+// The whole call-window chain on a call playing on this Mac, minus the mic:
+// records the system audio (configured engine) and reads the call window
+// for <seconds>, then transcribes, diarizes, builds the evidence and prints
+// the evidence and the transcript. Needs Screen Recording (and System Audio
+// Recording for taps): run from the bundle with `open -n`.
+//   --call-test <seconds> <dir> [--title <text>] [--model <id>]
+// --call-test-replay <dir> [--model <id>] [--drop <start> <end>] redoes the
+// analysis on what a run left in <dir> (system.caf, call.jsonl, start.json);
+// --drop removes the transcript's segments in that span first.
+if let idx = CommandLine.arguments.firstIndex(where: { $0 == "--call-test" || $0 == "--call-test-replay" }) {
+    let args = CommandLine.arguments
+    let replay = args[idx] == "--call-test-replay"
+    func value(after flag: String) -> String? {
+        guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+    let seconds = replay ? 0 : (idx + 1 < args.count ? Double(args[idx + 1]) : nil) ?? -1
+    let dirArg = replay ? (idx + 1 < args.count ? args[idx + 1] : nil) : (idx + 2 < args.count ? args[idx + 2] : nil)
+    guard let dirArg, seconds >= 0 else {
+        FileHandle.standardError.write(Data("usage: --call-test <seconds> <dir> [--title <text>] [--model <id>] | --call-test-replay <dir>\n".utf8))
+        exit(2)
+    }
+    let dir = URL(fileURLWithPath: dirArg, isDirectory: true)
+    let model = value(after: "--model").flatMap(TranscriptionModel.init(rawValue:)) ?? .default
+    let audioURL = dir.appendingPathComponent("system.caf")
+    let framesURL = dir.appendingPathComponent(CallFrameLog.fileName)
+    let startURL = dir.appendingPathComponent("start.json")
+    _ = NSApplication.shared
+    Task { @MainActor in
+        do {
+            if !replay {
+                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                let cap = SystemAudioEngines.make(outputURL: audioURL)
+                try await cap.start()
+                let observer = CallObserver(url: framesURL, titleOverride: value(after: "--title"))
+                observer.start()
+                let t0 = Date()
+                while Date().timeIntervalSince(t0) < seconds {
+                    cap.checkHealth()
+                    try? await Task.sleep(for: .milliseconds(200))
+                }
+                await observer.stop()
+                await cap.stop()
+                // The system file's start is the timeline here (no mic).
+                let start = ["system_start_host": cap.fileStartHostSeconds ?? 0, "wall": t0.timeIntervalSince1970]
+                try JSONSerialization.data(withJSONObject: start).write(to: startURL)
+                print("recorded \(Int(seconds))s; frames: \(CallFrameLog.read(framesURL).count)")
+            }
+            let start = (try JSONSerialization.jsonObject(with: Data(contentsOf: startURL))) as? [String: Double] ?? [:]
+            let frames = CallFrameLog.read(framesURL)
+            var results = try await Transcriber.shared.transcribe(audioPath: audioURL.path, model: model)
+            if let turns = try await Diarizer.shared.diarize(audioPath: audioURL.path) {
+                results = Diarizer.label(results, with: turns)
+            }
+            // --drop <start> <end>: remove the transcript's segments in that
+            // span, as if transcription had missed them, to see the caption
+            // fill put the words back.
+            if let i = args.firstIndex(of: "--drop"), i + 2 < args.count,
+               let from = Float(args[i + 1]), let to = Float(args[i + 2]) {
+                results = results.map { r in
+                    STTResult(segments: r.segments.filter { $0.end <= from || $0.start >= to }, language: r.language)
+                }
+                print("dropped the transcript between \(from)s and \(to)s")
+            }
+            let times = CallEvidenceBuilder.frameTimes(frames, micStartHost: start["system_start_host"],
+                                                       startedAt: Date(timeIntervalSince1970: start["wall"] ?? 0))
+            let evidence = CallEvidenceBuilder.build(frames: frames, times: times, systemOffset: 0,
+                                                     mic: [], system: results.flatMap(\.segments))
+            print("frames=\(frames.count) me=\(evidence.me ?? "-") others=\(evidence.others)")
+            print("voices: " + evidence.voiceNames.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+            print("corrections: \(evidence.corrections)")
+            print("caption fills: \(evidence.captionFills.count)")
+            var meta = RecordingMeta(title: "Call test", started_at: Date(timeIntervalSince1970: start["wall"] ?? 0),
+                                     device: "mac", client_version: AppInfo.version)
+            meta.attendees = nil
+            let output = TranscriptBuilder.build(meta: meta, micResults: [], systemResults: results, call: evidence)
+            print(output.markdown)
+            exit(0)
+        } catch {
+            FileHandle.standardError.write(Data("call test failed: \(error)\n".utf8))
             exit(1)
         }
     }

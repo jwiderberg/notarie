@@ -307,6 +307,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     private let marginField = SettingsUI.numberField()
     private let marginMessage = SettingsUI.messageLabel()
     private let diarizeCheckbox = NSButton(checkboxWithTitle: "Separate the other speakers (local diarizer)", target: nil, action: nil)
+    private let callWindowCheckbox = NSButton(checkboxWithTitle: "Read the call window for names", target: nil, action: nil)
     private let detailsCheckbox = NSButton(checkboxWithTitle: "Full meeting details: attendees, location and invite notes", target: nil, action: nil)
     private let echoCheckbox = NSButton(checkboxWithTitle: "Remove the other side's voice from my track (calls on speakers)", target: nil, action: nil)
     private let voiceMemoPopup = NSPopUpButton()
@@ -611,6 +612,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         diarizeCheckbox.target = self
         diarizeCheckbox.action = #selector(diarizeToggled)
         form.row("Speakers:", diarizeCheckbox)
+        callWindowCheckbox.target = self
+        callWindowCheckbox.action = #selector(callWindowToggled)
+        form.row(nil, callWindowCheckbox)
+        form.under(SettingsUI.note("Reads the Zoom, Teams or Meet window every 2 seconds while recording: the names on the tiles, who is highlighted as speaking, and live captions. Needs Screen Recording. Only the text is kept, on this Mac."))
         echoCheckbox.target = self
         echoCheckbox.action = #selector(echoToggled)
         form.row("Echo:", echoCheckbox)
@@ -661,6 +666,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         marginField.stringValue = String(format: "%g", Config.sttLanguageMargin())
         SettingsUI.show(marginMessage, info: SettingsUI.overrideNote(for: .sttLanguageMargin))
         diarizeCheckbox.state = Config.diarizationEnabled() ? .on : .off
+        callWindowCheckbox.state = Config.readCallWindow() ? .on : .off
         echoCheckbox.state = Config.echoCancellationEnabled() ? .on : .off
         voiceMemoPopup.selectItem(at: Config.voiceMemoUsesAppleTranscript() ? 1 : 0)
         excludedIDs = Config.systemAudioExcludedBundleIDs()
@@ -765,6 +771,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
 
     @objc private func diarizeToggled() {
         Settings.shared.set(Setting.diarizeEnabled, diarizeCheckbox.state == .on)
+    }
+
+    @objc private func callWindowToggled() {
+        Settings.shared.set(Setting.readCallWindow, callWindowCheckbox.state == .on)
     }
 
     @objc private func detailsToggled() {

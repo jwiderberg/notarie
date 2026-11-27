@@ -73,6 +73,7 @@ enum SettingKey: String, CaseIterable, Sendable {
     case systemAudioExcludedBundleIDs
     case systemAudioEngine
     case diarizeEnabled
+    case readCallWindow
     case echoCancellationEnabled
     case markdownFullMeetingDetails
     case voiceMemoUsesAppleTranscript
@@ -101,6 +102,7 @@ enum SettingKey: String, CaseIterable, Sendable {
         case .systemAudioExcludedBundleIDs: return AnySettingSpec(Setting.systemAudioExcludedBundleIDs)
         case .systemAudioEngine: return AnySettingSpec(Setting.systemAudioEngine)
         case .diarizeEnabled: return AnySettingSpec(Setting.diarizeEnabled)
+        case .readCallWindow: return AnySettingSpec(Setting.readCallWindow)
         case .echoCancellationEnabled: return AnySettingSpec(Setting.echoCancellationEnabled)
         case .markdownFullMeetingDetails: return AnySettingSpec(Setting.markdownFullMeetingDetails)
         case .voiceMemoUsesAppleTranscript: return AnySettingSpec(Setting.voiceMemoUsesAppleTranscript)
@@ -305,6 +307,9 @@ enum Setting {
     static let diarizeEnabled: SettingSpec<Bool> = .bool(
         .diarizeEnabled, env: "DIARIZE", default: true,
         "Split the \"Them\" stream into distinct speakers with the local diarizer.")
+    static let readCallWindow: SettingSpec<Bool> = .bool(
+        .readCallWindow, env: "READ_CALL_WINDOW", default: false,
+        "While recording, read the call window (Zoom, Teams, Meet) every 2 s for participant names, the active speaker and captions, to name the speakers. Needs Screen Recording; only the text is kept.")
     static let echoCancellationEnabled: SettingSpec<Bool> = .bool(
         .echoCancellationEnabled, env: "ECHO_CANCEL", default: true,
         "Remove the other side's voice from the mic track before transcribing (it leaks in when the call plays on speakers).")

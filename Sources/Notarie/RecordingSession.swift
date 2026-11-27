@@ -42,6 +42,7 @@ final class RecordingSession {
     private var systemAudio: (any SystemAudioEngine)?
     private var selectedSystemAudioEngine: SystemAudioEngineKind?
     private var mic: MicCapture?
+    private var callObserver: CallObserver?
 
     // Called when the selected system-audio engine stops outside our control
     // (capture stopped, permission revoked, etc.). The handler is expected to
@@ -112,7 +113,8 @@ final class RecordingSession {
             system_buffers: Int(systemAudio.buffersDelivered),
             system_had_signal: systemAudio.hasSignal,
             system_writer_failed: systemAudio.hasWriterFailed,
-            system_start_offset_seconds: CaptureHealth.startOffset(mic: mic.fileStartHostSeconds, system: systemAudio.fileStartHostSeconds)
+            system_start_offset_seconds: CaptureHealth.startOffset(mic: mic.fileStartHostSeconds, system: systemAudio.fileStartHostSeconds),
+            mic_start_host_seconds: mic.fileStartHostSeconds
         )
     }
     func systemHasSignal() -> Bool { systemAudio?.hasSignal ?? false }
@@ -174,6 +176,11 @@ final class RecordingSession {
             // anyway. The cost is two prompt round-trips first launch.
             try await mic.start()
             try await systemAudio.start()
+            if Config.readCallWindow() {
+                let observer = CallObserver(url: CallFrameLog.url(in: slot))
+                observer.start()
+                callObserver = observer
+            }
         } catch {
             await cleanupAfterFailure()
             throw error
@@ -185,6 +192,8 @@ final class RecordingSession {
 
         if let systemAudio { await systemAudio.stop() }
         if let mic { mic.stop() }
+        await callObserver?.stop()
+        callObserver = nil
         meta.capture_health = captureHealth()
 
         // Clear session state regardless of whether writeMeta succeeds — the
@@ -210,6 +219,8 @@ final class RecordingSession {
     }
 
     private func cleanupAfterFailure() async {
+        await callObserver?.stop()
+        callObserver = nil
         if let systemAudio { await systemAudio.stop() }
         if let mic { mic.stop() }
         // Leave the outbox dir on disk — useful for debugging which

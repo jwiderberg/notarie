@@ -4,8 +4,9 @@
 
 A single-user Mac app. It runs as you, and macOS has given it the right to
 hear your microphone and the audio your Mac plays (the System Audio Recording
-grant, or Screen Recording if you switch to the ScreenCaptureKit engine). It
-optionally reads your calendar, and, if you allow it, the Voice Memos
+grant, or Screen Recording if you switch to the ScreenCaptureKit engine). With
+"Read the call window for names" on, it also reads the meeting window's text
+during a recording (Screen Recording grant). It optionally reads your calendar, and, if you allow it, the Voice Memos
 library. It writes audio and
 transcripts to your own disk. There is no server, no account and no
 multi-user mode.
@@ -74,6 +75,16 @@ fixed.
   tagged recording are stored in that recording's `meta.json` on your Mac.
   They reach the Markdown file in your transcripts folder only with full
   meeting details turned on (Settings › General).
+- The call window is read only when you turn on "Read the call window for
+  names" (Settings › Transcription), and only while a recording runs. Every
+  2 seconds the app takes a screenshot of the meeting window alone (Zoom,
+  Teams, or a browser window whose front tab is Meet or Teams), reads its
+  text on the Mac with Apple Vision, and throws the picture away. What it
+  keeps is text: the names on the video tiles, who was highlighted as
+  speaking, caption lines and other words on screen (which can include
+  whatever someone shared). That text is stored in the recording's
+  `call.jsonl` on your Mac and used to name the speakers; it is never sent
+  anywhere and goes when the recording's folder is pruned.
 - It does not run shell commands or load plug-ins, and the build refuses to
   link a prebuilt native text-processing library that an earlier dependency
   version shipped (`scripts/make-app.sh` checks for it).
